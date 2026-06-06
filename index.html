@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>文章暗号化・復号ツール</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --primary:      #2563eb;
+      --primary-dark: #1d4ed8;
+      --primary-bg:   #eff6ff;
+      --success:      #16a34a;
+      --success-bg:   #dcfce7;
+      --danger:       #dc2626;
+      --danger-bg:    #fee2e2;
+      --gray-50:  #f9fafb;
+      --gray-100: #f3f4f6;
+      --gray-200: #e5e7eb;
+      --gray-300: #d1d5db;
+      --gray-400: #9ca3af;
+      --gray-500: #6b7280;
+      --gray-700: #374151;
+      --gray-900: #111827;
+      --radius: 14px;
+      --shadow: 0 1px 3px rgba(0,0,0,.1), 0 1px 2px rgba(0,0,0,.06);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: linear-gradient(160deg, #0f172a 0%, #1e3a5f 100%);
+      min-height: 100vh;
+      padding: 20px 16px 48px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* Header */
+    header { text-align: center; margin-bottom: 24px; }
+    .header-icon {
+      font-size: 2.8rem;
+      margin-bottom: 8px;
+      display: block;
+      filter: drop-shadow(0 0 12px rgba(96,165,250,.6));
+    }
+    header h1 {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: -.02em;
+    }
+    header p {
+      font-size: .82rem;
+      color: #93c5fd;
+      margin-top: 4px;
+    }
+
+    /* Container */
+    .container { width: 100%; max-width: 460px; display: flex; flex-direction: column; gap: 14px; }
+
+    /* Card */
+    .card {
+      background: #fff;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 20px;
+    }
+    .card-title {
+      font-size: .72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--gray-400);
+      margin-bottom: 16px;
+    }
+
+    /* Tab switcher */
+    .tabs {
+      display: flex;
+      background: var(--gray-100);
+      border-radius: 10px;
+      padding: 4px;
+      gap: 4px;
+      margin-bottom: 20px;
+    }
+    .tab {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      border-radius: 8px;
+      font-size: .9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .15s, color .15s, box-shadow .15s;
+      background: transparent;
+      color: var(--gray-500);
+    }
+    .tab.active {
+      background: #fff;
+      color: var(--gray-900);
+      box-shadow: 0 1px 3px rgba(0,0,0,.12);
+    }
+
+    /* Form fields */
+    .field { margin-bottom: 14px; }
+    .field:last-child { margin-bottom: 0; }
+    .field label {
+      display: block;
+      font-size: .8rem;
+      font-weight: 600;
+      color: var(--gray-700);
+      margin-bottom: 6px;
+    }
+
+    textarea, .password-wrap input {
+      width: 100%;
+      border: 1.5px solid var(--gray-200);
+      border-radius: 10px;
+      padding: 12px;
+      font-size: .9rem;
+      color: var(--gray-900);
+      font-family: inherit;
+      outline: none;
+      transition: border-color .15s;
+      resize: vertical;
+      background: #fff;
+    }
+    textarea:focus, .password-wrap input:focus { border-color: var(--primary); }
+    textarea { min-height: 110px; }
+
+    .password-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+    .password-wrap input { padding-right: 44px; }
+    .eye-btn {
+      position: absolute;
+      right: 10px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 1.1rem;
+      padding: 4px;
+      color: var(--gray-400);
+      line-height: 1;
+    }
+
+    /* Strength meter */
+    .strength-wrap { margin-top: 6px; display: flex; align-items: center; gap: 8px; }
+    .strength-bars { display: flex; gap: 3px; flex: 1; }
+    .strength-bar {
+      flex: 1;
+      height: 4px;
+      border-radius: 2px;
+      background: var(--gray-200);
+      transition: background .2s;
+    }
+    .strength-label { font-size: .72rem; color: var(--gray-400); white-space: nowrap; }
+
+    /* Action button */
+    .btn {
+      width: 100%;
+      padding: 13px;
+      border: none;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background .15s, transform .1s;
+      letter-spacing: .02em;
+    }
+    .btn:active { transform: scale(.98); }
+    .btn-encrypt { background: linear-gradient(135deg, #2563eb, #4f46e5); color: #fff; }
+    .btn-decrypt { background: linear-gradient(135deg, #059669, #0284c7); color: #fff; }
+
+    /* Result area */
+    .result-box {
+      display: none;
+      margin-top: 14px;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1.5px solid var(--gray-200);
+    }
+    .result-box.show { display: block; }
+    .result-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      background: var(--gray-50);
+      border-bottom: 1.5px solid var(--gray-200);
+    }
+    .result-header .result-title {
+      font-size: .75rem;
+      font-weight: 600;
+      color: var(--gray-500);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .copy-btn {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 5px 10px;
+      border: 1.5px solid var(--gray-200);
+      border-radius: 7px;
+      background: #fff;
+      font-size: .78rem;
+      font-weight: 600;
+      color: var(--gray-700);
+      cursor: pointer;
+      transition: background .12s, border-color .12s;
+    }
+    .copy-btn:hover { background: var(--gray-50); border-color: var(--gray-300); }
+    .copy-btn.copied { border-color: var(--success); color: var(--success); }
+    .result-text {
+      padding: 12px;
+      font-family: 'Courier New', monospace;
+      font-size: .82rem;
+      word-break: break-all;
+      color: var(--gray-700);
+      line-height: 1.6;
+      max-height: 160px;
+      overflow-y: auto;
+      background: #fff;
+    }
+
+    /* Status message */
+    .status {
+      display: none;
+      padding: 11px 14px;
+      border-radius: 10px;
+      font-size: .85rem;
+      font-weight: 500;
+      margin-top: 12px;
+      align-items: center;
+      gap: 8px;
+    }
+    .status.show { display: flex; }
+    .status.success { background: var(--success-bg); color: var(--success); }
+    .status.error   { background: var(--danger-bg);  color: var(--danger); }
+
+    /* Info card */
+    .info-card {
+      background: rgba(255,255,255,.07);
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: var(--radius);
+      padding: 16px;
+      color: #93c5fd;
+      font-size: .8rem;
+      line-height: 1.7;
+    }
+    .info-card strong { color: #bfdbfe; }
+    .info-row { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 6px; }
+    .info-row:last-child { margin-bottom: 0; }
+    .info-row .icon { flex-shrink: 0; }
+
+    @media (min-width: 480px) {
+      body { padding: 36px 16px 64px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <span class="header-icon">🔐</span>
+  <h1>文章暗号化・復号ツール</h1>
+  <p>AES-GCM（256bit）+ PBKDF2 によるブラウザ内完結暗号化</p>
+</header>
+
+<div class="container">
+
+  <!-- Main card -->
+  <div class="card">
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" id="tabEncrypt" onclick="switchTab('encrypt')">🔒 暗号化</button>
+      <button class="tab"        id="tabDecrypt" onclick="switchTab('decrypt')">🔓 復号</button>
+    </div>
+
+    <!-- Encrypt panel -->
+    <div id="panelEncrypt">
+      <div class="field">
+        <label>暗号化するテキスト</label>
+        <textarea id="encInput" placeholder="ここに暗号化したいテキストを入力…"></textarea>
+      </div>
+      <div class="field">
+        <label>パスワード</label>
+        <div class="password-wrap">
+          <input type="password" id="encPass" placeholder="パスワードを入力" oninput="checkStrength(this,'encStrength','encStrLabel')">
+          <button class="eye-btn" onclick="toggleEye('encPass',this)" title="表示切替">👁</button>
+        </div>
+        <div class="strength-wrap">
+          <div class="strength-bars" id="encStrength">
+            <div class="strength-bar"></div>
+            <div class="strength-bar"></div>
+            <div class="strength-bar"></div>
+            <div class="strength-bar"></div>
+          </div>
+          <span class="strength-label" id="encStrLabel">強度：-</span>
+        </div>
+      </div>
+      <button class="btn btn-encrypt" onclick="doEncrypt()">🔒 暗号化する</button>
+
+      <div class="result-box" id="encResult">
+        <div class="result-header">
+          <span class="result-title">🔐 暗号化テキスト</span>
+          <button class="copy-btn" id="encCopyBtn" onclick="copyText('encResultText','encCopyBtn')">📋 コピー</button>
+        </div>
+        <div class="result-text" id="encResultText"></div>
+      </div>
+      <div class="status" id="encStatus"></div>
+    </div>
+
+    <!-- Decrypt panel -->
+    <div id="panelDecrypt" style="display:none">
+      <div class="field">
+        <label>復号するテキスト（暗号化済み）</label>
+        <textarea id="decInput" placeholder="ここに暗号化テキストを貼り付け…"></textarea>
+      </div>
+      <div class="field">
+        <label>パスワード</label>
+        <div class="password-wrap">
+          <input type="password" id="decPass" placeholder="暗号化時のパスワードを入力">
+          <button class="eye-btn" onclick="toggleEye('decPass',this)" title="表示切替">👁</button>
+        </div>
+      </div>
+      <button class="btn btn-decrypt" onclick="doDecrypt()">🔓 復号する</button>
+
+      <div class="result-box" id="decResult">
+        <div class="result-header">
+          <span class="result-title">📄 復号テキスト</span>
+          <button class="copy-btn" id="decCopyBtn" onclick="copyText('decResultText','decCopyBtn')">📋 コピー</button>
+        </div>
+        <div class="result-text" id="decResultText"></div>
+      </div>
+      <div class="status" id="decStatus"></div>
+    </div>
+  </div>
+
+  <!-- Info -->
+  <div class="info-card">
+    <div class="info-row"><span class="icon">🛡</span><span><strong>AES-256-GCM</strong> — 改ざん検知付き認証暗号。軍用レベルの強度。</span></div>
+    <div class="info-row"><span class="icon">🔑</span><span><strong>PBKDF2（10万回反復）</strong> — パスワードから鍵を生成。総当たり攻撃を困難に。</span></div>
+    <div class="info-row"><span class="icon">🌐</span><span><strong>ブラウザ内完結</strong> — テキストは外部に送信されません。Web Crypto API を使用。</span></div>
+  </div>
+
+</div>
+
+<script>
+  // --- Tab switch ---
+  function switchTab(tab) {
+    const isEnc = tab === 'encrypt';
+    document.getElementById('panelEncrypt').style.display = isEnc ? '' : 'none';
+    document.getElementById('panelDecrypt').style.display = isEnc ? 'none' : '';
+    document.getElementById('tabEncrypt').classList.toggle('active', isEnc);
+    document.getElementById('tabDecrypt').classList.toggle('active', !isEnc);
+  }
+
+  // --- Eye toggle ---
+  function toggleEye(inputId, btn) {
+    const el = document.getElementById(inputId);
+    const show = el.type === 'password';
+    el.type = show ? 'text' : 'password';
+    btn.textContent = show ? '🙈' : '👁';
+  }
+
+  // --- Password strength ---
+  const STRENGTH = [
+    { label: '非常に弱い', colors: ['#ef4444', '#e5e7eb', '#e5e7eb', '#e5e7eb'] },
+    { label: '弱い',       colors: ['#f97316', '#f97316', '#e5e7eb', '#e5e7eb'] },
+    { label: '普通',       colors: ['#eab308', '#eab308', '#eab308', '#e5e7eb'] },
+    { label: '強い',       colors: ['#22c55e', '#22c55e', '#22c55e', '#22c55e'] },
+  ];
+
+  function checkStrength(input, barsId, labelId) {
+    const v = input.value;
+    let score = 0;
+    if (v.length >= 8)  score++;
+    if (v.length >= 12) score++;
+    if (/[A-Z]/.test(v) && /[a-z]/.test(v)) score++;
+    if (/[0-9]/.test(v) && /[^A-Za-z0-9]/.test(v)) score++;
+    score = Math.min(score, 3);
+    const bars = document.getElementById(barsId).children;
+    const s = STRENGTH[v.length === 0 ? 0 : score];
+    Array.from(bars).forEach((b, i) => b.style.background = v.length === 0 ? '#e5e7eb' : s.colors[i]);
+    document.getElementById(labelId).textContent = v.length === 0 ? '強度：-' : '強度：' + s.label;
+  }
+
+  // --- Copy ---
+  async function copyText(textId, btnId) {
+    const text = document.getElementById(textId).textContent;
+    await navigator.clipboard.writeText(text);
+    const btn = document.getElementById(btnId);
+    btn.textContent = '✅ コピー済み';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = '📋 コピー'; btn.classList.remove('copied'); }, 2000);
+  }
+
+  // --- Show status ---
+  function showStatus(id, type, msg) {
+    const el = document.getElementById(id);
+    el.className = 'status show ' + type;
+    el.innerHTML = (type === 'success' ? '✅ ' : '❌ ') + msg;
+  }
+  function clearStatus(id) {
+    document.getElementById(id).className = 'status';
+  }
+
+  // === Crypto helpers (Web Crypto API) ===
+
+  const SALT_LEN = 16, IV_LEN = 12, ITER = 100_000;
+
+  async function deriveKey(password, salt) {
+    const enc = new TextEncoder();
+    const keyMaterial = await crypto.subtle.importKey(
+      'raw', enc.encode(password), 'PBKDF2', false, ['deriveKey']
+    );
+    return crypto.subtle.deriveKey(
+      { name: 'PBKDF2', salt, iterations: ITER, hash: 'SHA-256' },
+      keyMaterial,
+      { name: 'AES-GCM', length: 256 },
+      false, ['encrypt', 'decrypt']
+    );
+  }
+
+  function toBase64(buf) {
+    return btoa(String.fromCharCode(...new Uint8Array(buf)));
+  }
+  function fromBase64(str) {
+    return Uint8Array.from(atob(str), c => c.charCodeAt(0));
+  }
+
+  async function encrypt(plaintext, password) {
+    const salt = crypto.getRandomValues(new Uint8Array(SALT_LEN));
+    const iv   = crypto.getRandomValues(new Uint8Array(IV_LEN));
+    const key  = await deriveKey(password, salt);
+    const enc  = new TextEncoder();
+    const cipher = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, enc.encode(plaintext));
+    const combined = new Uint8Array(SALT_LEN + IV_LEN + cipher.byteLength);
+    combined.set(salt, 0);
+    combined.set(iv,   SALT_LEN);
+    combined.set(new Uint8Array(cipher), SALT_LEN + IV_LEN);
+    return toBase64(combined.buffer);
+  }
+
+  async function decrypt(encoded, password) {
+    const combined = fromBase64(encoded);
+    const salt   = combined.slice(0, SALT_LEN);
+    const iv     = combined.slice(SALT_LEN, SALT_LEN + IV_LEN);
+    const cipher = combined.slice(SALT_LEN + IV_LEN);
+    const key    = await deriveKey(password, salt);
+    const plain  = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, cipher);
+    return new TextDecoder().decode(plain);
+  }
+
+  // === UI handlers ===
+
+  async function doEncrypt() {
+    clearStatus('encStatus');
+    const text = document.getElementById('encInput').value.trim();
+    const pass = document.getElementById('encPass').value;
+    if (!text) { showStatus('encStatus', 'error', 'テキストを入力してください'); return; }
+    if (!pass)  { showStatus('encStatus', 'error', 'パスワードを入力してください'); return; }
+    try {
+      const result = await encrypt(text, pass);
+      document.getElementById('encResultText').textContent = result;
+      document.getElementById('encResult').classList.add('show');
+      showStatus('encStatus', 'success', '暗号化が完了しました');
+    } catch (e) {
+      showStatus('encStatus', 'error', '暗号化に失敗しました：' + e.message);
+    }
+  }
+
+  async function doDecrypt() {
+    clearStatus('decStatus');
+    const text = document.getElementById('decInput').value.trim();
+    const pass = document.getElementById('decPass').value;
+    if (!text) { showStatus('decStatus', 'error', '暗号化テキストを入力してください'); return; }
+    if (!pass)  { showStatus('decStatus', 'error', 'パスワードを入力してください'); return; }
+    try {
+      const result = await decrypt(text, pass);
+      document.getElementById('decResultText').textContent = result;
+      document.getElementById('decResult').classList.add('show');
+      showStatus('decStatus', 'success', '復号が完了しました');
+    } catch {
+      showStatus('decStatus', 'error', 'パスワードが違うか、テキストが破損しています');
+    }
+  }
+</script>
+</body>
+</html>
