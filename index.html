@@ -1,496 +1,437 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>文章暗号化・復号ツール</title>
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Text Encryption Tool — chunk-jp</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body { background: #09090B; color: #FAFAFA; font-family: 'Inter', system-ui, -apple-system, sans-serif; -webkit-font-smoothing: antialiased; }
+  ::selection { background: rgba(59,130,246,0.25); color: #FAFAFA; }
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #27272A; border-radius: 3px; }
+  textarea { resize: none; outline: none; }
+  input { outline: none; }
+  textarea:focus, input:focus { border-color: #3B82F6 !important; box-shadow: 0 0 0 3px rgba(59,130,246,0.12) !important; }
+  textarea::placeholder, input::placeholder { color: #3F3F46; }
+  @keyframes fade-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+  .fade-in { animation: fade-in 0.2s ease-out; }
+  @keyframes shake { 0%,100%{ transform: translateX(0); } 20%,60%{ transform: translateX(-5px); } 40%,80%{ transform: translateX(5px); } }
+  .shake { animation: shake 0.3s ease; }
+  .nav-link { transition: color 0.15s, background 0.15s; }
+  .nav-link:hover { background: #111113 !important; color: #FAFAFA !important; }
+  .gh-btn { transition: border-color 0.15s, color 0.15s; }
+  .gh-btn:hover { border-color: #3F3F46 !important; color: #FAFAFA !important; }
+  #mode-decrypt { transition: background 0.15s, color 0.15s; }
+  #mode-decrypt:hover { color: #A1A1AA !important; }
+  #clear-input { transition: color 0.15s; }
+  #clear-input:hover { color: #71717A !important; }
+  #toggle-pass { transition: color 0.15s; }
+  #toggle-pass:hover { color: #71717A !important; }
+  #action-btn { transition: background 0.15s, opacity 0.15s; }
+  #action-btn:hover:not(:disabled) { background: #2563EB !important; }
+  #copy-btn { transition: color 0.15s, border-color 0.15s; }
+  #copy-btn:hover { color: #FAFAFA !important; border-color: #3F3F46 !important; }
+  .footer-link { transition: color 0.15s; }
+  .footer-link:hover { color: #FAFAFA !important; }
+  .footer-gh { transition: color 0.15s, border-color 0.15s; }
+  .footer-gh:hover { color: #FAFAFA !important; border-color: #3F3F46 !important; }
 
-    :root {
-      --primary:      #2563eb;
-      --primary-dark: #1d4ed8;
-      --primary-bg:   #eff6ff;
-      --success:      #16a34a;
-      --success-bg:   #dcfce7;
-      --danger:       #dc2626;
-      --danger-bg:    #fee2e2;
-      --gray-50:  #f9fafb;
-      --gray-100: #f3f4f6;
-      --gray-200: #e5e7eb;
-      --gray-300: #d1d5db;
-      --gray-400: #9ca3af;
-      --gray-500: #6b7280;
-      --gray-700: #374151;
-      --gray-900: #111827;
-      --radius: 14px;
-      --shadow: 0 1px 3px rgba(0,0,0,.1), 0 1px 2px rgba(0,0,0,.06);
-    }
-
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: linear-gradient(160deg, #0f172a 0%, #1e3a5f 100%);
-      min-height: 100vh;
-      padding: 20px 16px 48px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-
-    /* Header */
-    header { text-align: center; margin-bottom: 24px; }
-    .header-icon {
-      font-size: 2.8rem;
-      margin-bottom: 8px;
-      display: block;
-      filter: drop-shadow(0 0 12px rgba(96,165,250,.6));
-    }
-    header h1 {
-      font-size: 1.5rem;
-      font-weight: 800;
-      color: #fff;
-      letter-spacing: -.02em;
-    }
-    header p {
-      font-size: .82rem;
-      color: #93c5fd;
-      margin-top: 4px;
-    }
-
-    /* Container */
-    .container { width: 100%; max-width: 460px; display: flex; flex-direction: column; gap: 14px; }
-
-    /* Card */
-    .card {
-      background: #fff;
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      padding: 20px;
-    }
-    .card-title {
-      font-size: .72rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: .08em;
-      color: var(--gray-400);
-      margin-bottom: 16px;
-    }
-
-    /* Tab switcher */
-    .tabs {
-      display: flex;
-      background: var(--gray-100);
-      border-radius: 10px;
-      padding: 4px;
-      gap: 4px;
-      margin-bottom: 20px;
-    }
-    .tab {
-      flex: 1;
-      padding: 10px;
-      border: none;
-      border-radius: 8px;
-      font-size: .9rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background .15s, color .15s, box-shadow .15s;
-      background: transparent;
-      color: var(--gray-500);
-    }
-    .tab.active {
-      background: #fff;
-      color: var(--gray-900);
-      box-shadow: 0 1px 3px rgba(0,0,0,.12);
-    }
-
-    /* Form fields */
-    .field { margin-bottom: 14px; }
-    .field:last-child { margin-bottom: 0; }
-    .field label {
-      display: block;
-      font-size: .8rem;
-      font-weight: 600;
-      color: var(--gray-700);
-      margin-bottom: 6px;
-    }
-
-    textarea, .password-wrap input {
-      width: 100%;
-      border: 1.5px solid var(--gray-200);
-      border-radius: 10px;
-      padding: 12px;
-      font-size: .9rem;
-      color: var(--gray-900);
-      font-family: inherit;
-      outline: none;
-      transition: border-color .15s;
-      resize: vertical;
-      background: #fff;
-    }
-    textarea:focus, .password-wrap input:focus { border-color: var(--primary); }
-    textarea { min-height: 110px; }
-
-    .password-wrap {
-      position: relative;
-      display: flex;
-      align-items: center;
-    }
-    .password-wrap input { padding-right: 44px; }
-    .eye-btn {
-      position: absolute;
-      right: 10px;
-      background: none;
-      border: none;
-      cursor: pointer;
-      font-size: 1.1rem;
-      padding: 4px;
-      color: var(--gray-400);
-      line-height: 1;
-    }
-
-    /* Strength meter */
-    .strength-wrap { margin-top: 6px; display: flex; align-items: center; gap: 8px; }
-    .strength-bars { display: flex; gap: 3px; flex: 1; }
-    .strength-bar {
-      flex: 1;
-      height: 4px;
-      border-radius: 2px;
-      background: var(--gray-200);
-      transition: background .2s;
-    }
-    .strength-label { font-size: .72rem; color: var(--gray-400); white-space: nowrap; }
-
-    /* Action button */
-    .btn {
-      width: 100%;
-      padding: 13px;
-      border: none;
-      border-radius: 10px;
-      font-size: 1rem;
-      font-weight: 700;
-      cursor: pointer;
-      transition: background .15s, transform .1s;
-      letter-spacing: .02em;
-    }
-    .btn:active { transform: scale(.98); }
-    .btn-encrypt { background: linear-gradient(135deg, #2563eb, #4f46e5); color: #fff; }
-    .btn-decrypt { background: linear-gradient(135deg, #059669, #0284c7); color: #fff; }
-
-    /* Result area */
-    .result-box {
-      display: none;
-      margin-top: 14px;
-      border-radius: 10px;
-      overflow: hidden;
-      border: 1.5px solid var(--gray-200);
-    }
-    .result-box.show { display: block; }
-    .result-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 8px 12px;
-      background: var(--gray-50);
-      border-bottom: 1.5px solid var(--gray-200);
-    }
-    .result-header .result-title {
-      font-size: .75rem;
-      font-weight: 600;
-      color: var(--gray-500);
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .copy-btn {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      padding: 5px 10px;
-      border: 1.5px solid var(--gray-200);
-      border-radius: 7px;
-      background: #fff;
-      font-size: .78rem;
-      font-weight: 600;
-      color: var(--gray-700);
-      cursor: pointer;
-      transition: background .12s, border-color .12s;
-    }
-    .copy-btn:hover { background: var(--gray-50); border-color: var(--gray-300); }
-    .copy-btn.copied { border-color: var(--success); color: var(--success); }
-    .result-text {
-      padding: 12px;
-      font-family: 'Courier New', monospace;
-      font-size: .82rem;
-      word-break: break-all;
-      color: var(--gray-700);
-      line-height: 1.6;
-      max-height: 160px;
-      overflow-y: auto;
-      background: #fff;
-    }
-
-    /* Status message */
-    .status {
-      display: none;
-      padding: 11px 14px;
-      border-radius: 10px;
-      font-size: .85rem;
-      font-weight: 500;
-      margin-top: 12px;
-      align-items: center;
-      gap: 8px;
-    }
-    .status.show { display: flex; }
-    .status.success { background: var(--success-bg); color: var(--success); }
-    .status.error   { background: var(--danger-bg);  color: var(--danger); }
-
-    /* Info card */
-    .info-card {
-      background: rgba(255,255,255,.07);
-      border: 1px solid rgba(255,255,255,.12);
-      border-radius: var(--radius);
-      padding: 16px;
-      color: #93c5fd;
-      font-size: .8rem;
-      line-height: 1.7;
-    }
-    .info-card strong { color: #bfdbfe; }
-    .info-row { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 6px; }
-    .info-row:last-child { margin-bottom: 0; }
-    .info-row .icon { flex-shrink: 0; }
-
-    @media (min-width: 480px) {
-      body { padding: 36px 16px 64px; }
-    }
-  </style>
+  @media (max-width: 640px) {
+    body { overflow-x: hidden; }
+    .nav-inner { padding: 0 16px !important; gap: 12px !important; }
+    .nav-links-wrap { display: none !important; }
+    .main-pad { padding: 48px 16px 80px !important; }
+    .page-h1 { font-size: 32px !important; }
+    .security-grid { grid-template-columns: minmax(0, 1fr) !important; }
+    .footer-grid { grid-template-columns: minmax(0, 1fr) !important; gap: 32px !important; }
+  }
+</style>
 </head>
 <body>
+<div style="min-height: 100vh; background: #09090B; color: #FAFAFA; font-family: 'Inter', system-ui, sans-serif; display: flex; flex-direction: column;">
 
-<header>
-  <span class="header-icon">🔐</span>
-  <h1>文章暗号化・復号ツール</h1>
-  <p>AES-GCM（256bit）+ PBKDF2 によるブラウザ内完結暗号化</p>
-</header>
-
-<div class="container">
-
-  <!-- Main card -->
-  <div class="card">
-    <!-- Tabs -->
-    <div class="tabs">
-      <button class="tab active" id="tabEncrypt" onclick="switchTab('encrypt')">🔒 暗号化</button>
-      <button class="tab"        id="tabDecrypt" onclick="switchTab('decrypt')">🔓 復号</button>
-    </div>
-
-    <!-- Encrypt panel -->
-    <div id="panelEncrypt">
-      <div class="field">
-        <label>暗号化するテキスト</label>
-        <textarea id="encInput" placeholder="ここに暗号化したいテキストを入力…"></textarea>
-      </div>
-      <div class="field">
-        <label>パスワード</label>
-        <div class="password-wrap">
-          <input type="password" id="encPass" placeholder="パスワードを入力" oninput="checkStrength(this,'encStrength','encStrLabel')">
-          <button class="eye-btn" onclick="toggleEye('encPass',this)" title="表示切替">👁</button>
-        </div>
-        <div class="strength-wrap">
-          <div class="strength-bars" id="encStrength">
-            <div class="strength-bar"></div>
-            <div class="strength-bar"></div>
-            <div class="strength-bar"></div>
-            <div class="strength-bar"></div>
+  <!-- NAV -->
+  <nav style="position: sticky; top: 0; z-index: 100;">
+    <div style="background: rgba(9,9,11,0.88); border-bottom: 1px solid #18181B; backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);">
+      <div class="nav-inner" style="max-width: 1100px; margin: 0 auto; padding: 0 24px; display: flex; align-items: center; height: 64px; gap: 40px;">
+        <a href="https://chunk-jp.github.io/" style="display: flex; align-items: center; gap: 10px; flex-shrink: 0; text-decoration: none; color: inherit;">
+          <div style="width: 32px; height: 32px; background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.2); border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+            <svg viewBox="0 0 16 16" width="13" height="13" fill="#3B82F6"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>
           </div>
-          <span class="strength-label" id="encStrLabel">強度：-</span>
+          <span style="font-size: 15px; font-weight: 600; letter-spacing: -0.01em; font-family: 'JetBrains Mono', monospace;">chunk-jp</span>
+        </a>
+        <div class="nav-links-wrap" style="display: flex; align-items: center; gap: 4px; flex: 1;">
+          <a href="https://chunk-jp.github.io/#mac-tools" class="nav-link" style="font-size: 14px; color: #71717A; text-decoration: none; padding: 6px 12px; border-radius: 6px;">Mac Tools</a>
+          <a href="https://chunk-jp.github.io/#browser-tools" class="nav-link" style="font-size: 14px; color: #71717A; text-decoration: none; padding: 6px 12px; border-radius: 6px;">Browser Utilities</a>
         </div>
+        <a href="https://github.com/chunk-jp" target="_blank" class="gh-btn" style="display: inline-flex; align-items: center; gap: 8px; background: #111113; border: 1px solid #27272A; color: #A1A1AA; font-size: 13px; font-weight: 500; padding: 8px 18px; border-radius: 8px; text-decoration: none; flex-shrink: 0;">
+          <svg viewBox="0 0 16 16" fill="currentColor" width="13" height="13"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+          GitHub
+        </a>
       </div>
-      <button class="btn btn-encrypt" onclick="doEncrypt()">🔒 暗号化する</button>
-
-      <div class="result-box" id="encResult">
-        <div class="result-header">
-          <span class="result-title">🔐 暗号化テキスト</span>
-          <button class="copy-btn" id="encCopyBtn" onclick="copyText('encResultText','encCopyBtn')">📋 コピー</button>
-        </div>
-        <div class="result-text" id="encResultText"></div>
-      </div>
-      <div class="status" id="encStatus"></div>
     </div>
+  </nav>
 
-    <!-- Decrypt panel -->
-    <div id="panelDecrypt" style="display:none">
-      <div class="field">
-        <label>復号するテキスト（暗号化済み）</label>
-        <textarea id="decInput" placeholder="ここに暗号化テキストを貼り付け…"></textarea>
+  <!-- MAIN -->
+  <main class="main-pad" style="flex: 1; padding: 64px 24px 100px;">
+    <div style="max-width: 760px; margin: 0 auto;">
+
+      <!-- Page title -->
+      <div style="margin-bottom: 44px;">
+        <div style="display: inline-flex; align-items: center; gap: 8px; background: #111113; border: 1px solid #27272A; border-radius: 6px; padding: 4px 12px; margin-bottom: 22px;">
+          <svg viewBox="0 0 14 14" fill="none" stroke="#3B82F6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="11" height="11"><rect x="1" y="6" width="12" height="7" rx="1.5"/><path d="M4 6V4a3 3 0 016 0v2"/><circle cx="7" cy="9.5" r="1" fill="#3B82F6" stroke="none"/></svg>
+          <span style="font-size: 11px; color: #52525B; font-family: 'JetBrains Mono', monospace; text-transform: uppercase; letter-spacing: 0.08em;">Browser Utility</span>
+        </div>
+        <h1 class="page-h1" style="font-size: 42px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.08; margin-bottom: 12px;">Text Encryption Tool</h1>
+        <p style="font-size: 16px; color: #71717A; line-height: 1.65; max-width: 520px;">Encrypt and decrypt text with a passphrase using AES-256-GCM — directly in your browser. Nothing is transmitted anywhere.</p>
       </div>
-      <div class="field">
-        <label>パスワード</label>
-        <div class="password-wrap">
-          <input type="password" id="decPass" placeholder="暗号化時のパスワードを入力">
-          <button class="eye-btn" onclick="toggleEye('decPass',this)" title="表示切替">👁</button>
+
+      <!-- Tool card -->
+      <div style="background: #0F0F12; border: 1px solid #1E1E23; border-radius: 16px; overflow: hidden; position: relative;">
+        <div style="position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, rgba(59,130,246,0.25), transparent);"></div>
+
+        <!-- Mode toggle bar -->
+        <div style="padding: 20px 28px; border-bottom: 1px solid #18181B; display: flex; align-items: center; justify-content: space-between; gap: 16px;">
+          <div style="font-size: 12px; font-weight: 600; color: #52525B; text-transform: uppercase; letter-spacing: 0.1em;">Mode</div>
+          <div style="display: flex; background: #09090B; border: 1px solid #27272A; border-radius: 8px; overflow: hidden;">
+            <button id="mode-encrypt" onclick="setMode(true)" style="display: flex; align-items: center; gap: 7px; padding: 8px 20px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; font-family: 'Inter', system-ui, sans-serif; background: #3B82F6; color: #fff;">
+              <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" width="10" height="10"><rect x="1" y="5.5" width="10" height="5.5" rx="1.2"/><path d="M3.5 5.5V3.5a2.5 2.5 0 015 0v2"/></svg>
+              Encrypt
+            </button>
+            <button id="mode-decrypt" onclick="setMode(false)" style="display: flex; align-items: center; gap: 7px; padding: 8px 20px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; font-family: 'Inter', system-ui, sans-serif; background: transparent; color: #71717A;">
+              <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" width="10" height="10"><rect x="1" y="5.5" width="10" height="5.5" rx="1.2"/><path d="M3.5 5.5V3.5a2.5 2.5 0 015 0v2" stroke-dasharray="2 1.5"/></svg>
+              Decrypt
+            </button>
+          </div>
+        </div>
+
+        <div style="padding: 28px;">
+
+          <!-- Input text -->
+          <div style="margin-bottom: 20px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+              <label id="input-label" for="input-text" style="font-size: 13px; font-weight: 500; color: #A1A1AA;">Plaintext</label>
+              <button id="clear-input" onclick="clearInput()" style="font-size: 11px; color: #3F3F46; background: none; border: none; cursor: pointer; font-family: 'Inter', sans-serif; padding: 2px 6px; border-radius: 4px;">Clear</button>
+            </div>
+            <textarea
+              id="input-text"
+              rows="6"
+              placeholder="Type or paste your text here…"
+              style="width: 100%; background: #09090B; border: 1px solid #27272A; border-radius: 10px; padding: 14px 16px; font-size: 14px; font-family: 'JetBrains Mono', monospace; color: #FAFAFA; line-height: 1.65; transition: border-color 0.15s, box-shadow 0.15s;"
+            ></textarea>
+          </div>
+
+          <!-- Passphrase -->
+          <div style="margin-bottom: 24px;">
+            <label for="passphrase" style="display: block; font-size: 13px; font-weight: 500; color: #A1A1AA; margin-bottom: 8px;">Passphrase</label>
+            <div style="position: relative;">
+              <input
+                id="passphrase"
+                type="password"
+                placeholder="Enter a strong passphrase…"
+                autocomplete="off"
+                style="width: 100%; background: #09090B; border: 1px solid #27272A; border-radius: 10px; padding: 12px 48px 12px 16px; font-size: 14px; font-family: 'JetBrains Mono', monospace; color: #FAFAFA; transition: border-color 0.15s, box-shadow 0.15s;"
+              >
+              <button id="toggle-pass" onclick="togglePass()" title="Show / hide passphrase" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; padding: 4px; color: #3F3F46; display: flex; align-items: center;">
+                <svg id="eye-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="15" height="15">
+                  <ellipse cx="8" cy="8" rx="6" ry="4"/>
+                  <circle cx="8" cy="8" r="1.5" fill="currentColor" stroke="none"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Action button -->
+          <button id="action-btn" onclick="runCrypto()" style="width: 100%; background: #3B82F6; color: #fff; font-size: 14px; font-weight: 600; padding: 13px 24px; border-radius: 10px; border: none; cursor: pointer; font-family: 'Inter', system-ui, sans-serif; display: flex; align-items: center; justify-content: center; gap: 9px; margin-bottom: 24px;">
+            <svg id="action-icon" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="12" height="12"><rect x="1" y="5.5" width="12" height="7" rx="1.5"/><path d="M4 5.5V3.5a3 3 0 016 0v2"/></svg>
+            <span id="action-label">Encrypt text</span>
+          </button>
+
+          <!-- Divider -->
+          <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 24px;">
+            <div style="flex: 1; height: 1px; background: #18181B;"></div>
+            <div style="font-size: 11px; color: #3F3F46; text-transform: uppercase; letter-spacing: 0.08em; font-family: 'JetBrains Mono', monospace; flex-shrink: 0;">Output</div>
+            <div style="flex: 1; height: 1px; background: #18181B;"></div>
+          </div>
+
+          <!-- Output area -->
+          <div>
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+              <label id="output-label" style="font-size: 13px; font-weight: 500; color: #A1A1AA;">Encrypted text</label>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <div id="status-badge" style="display: none; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 4px;"></div>
+                <button id="copy-btn" onclick="copyOutput()" style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: #71717A; background: #111113; border: 1px solid #27272A; border-radius: 6px; padding: 5px 12px; cursor: pointer; font-family: 'Inter', sans-serif;">
+                  <svg id="copy-icon" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="10" height="10">
+                    <rect x="4" y="4" width="7" height="7" rx="1"/>
+                    <path d="M1 8V2a1 1 0 011-1h6"/>
+                  </svg>
+                  <span id="copy-label">Copy</span>
+                </button>
+              </div>
+            </div>
+            <div style="position: relative;">
+              <textarea
+                id="output-text"
+                rows="6"
+                readonly
+                placeholder="Your result will appear here…"
+                style="width: 100%; background: #09090B; border: 1px solid #18181B; border-radius: 10px; padding: 14px 16px; font-size: 13px; font-family: 'JetBrains Mono', monospace; color: #71717A; line-height: 1.65; transition: border-color 0.3s; cursor: default;"
+              ></textarea>
+              <!-- Loading overlay -->
+              <div id="loading-overlay" style="display: none; position: absolute; inset: 0; background: rgba(9,9,11,0.7); border-radius: 10px; align-items: center; justify-content: center; gap: 10px;">
+                <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="#3B82F6" stroke-width="2" stroke-linecap="round">
+                  <path d="M10 2a8 8 0 0 1 8 8">
+                    <animateTransform attributeName="transform" type="rotate" from="0 10 10" to="360 10 10" dur="0.7s" repeatCount="indefinite"/>
+                  </path>
+                </svg>
+                <span style="font-size: 13px; color: #71717A;">Processing…</span>
+              </div>
+            </div>
+          </div>
+
         </div>
       </div>
-      <button class="btn btn-decrypt" onclick="doDecrypt()">🔓 復号する</button>
 
-      <div class="result-box" id="decResult">
-        <div class="result-header">
-          <span class="result-title">📄 復号テキスト</span>
-          <button class="copy-btn" id="decCopyBtn" onclick="copyText('decResultText','decCopyBtn')">📋 コピー</button>
+      <!-- Security notes -->
+      <div class="security-grid" style="margin-top: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <div style="background: rgba(34,197,94,0.04); border: 1px solid rgba(34,197,94,0.12); border-radius: 10px; padding: 14px 18px; display: flex; align-items: flex-start; gap: 10px;">
+          <svg viewBox="0 0 16 16" fill="none" stroke="#22C55E" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" width="14" height="14" style="flex-shrink: 0; margin-top: 1px;"><path d="M8 1.5L2 4.5v4c0 3.3 2.7 6.3 6 7 3.3-.7 6-3.7 6-7v-4L8 1.5Z"/><path d="M5.5 8l2 2L11 6"/></svg>
+          <p style="font-size: 12px; color: #52525B; line-height: 1.65;">All encryption runs in your browser. The passphrase and text are never transmitted.</p>
         </div>
-        <div class="result-text" id="decResultText"></div>
+        <div style="background: rgba(59,130,246,0.04); border: 1px solid rgba(59,130,246,0.12); border-radius: 10px; padding: 14px 18px; display: flex; align-items: flex-start; gap: 10px;">
+          <svg viewBox="0 0 16 16" fill="none" stroke="#3B82F6" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" width="14" height="14" style="flex-shrink: 0; margin-top: 1px;"><rect x="1" y="4.5" width="14" height="9" rx="1.5"/><path d="M4 4.5V3a4 4 0 018 0v1.5M8 9v2"/><circle cx="8" cy="8.5" r="1" fill="#3B82F6" stroke="none"/></svg>
+          <p style="font-size: 12px; color: #52525B; line-height: 1.65;"><span style="color: #A1A1AA; font-weight: 500;">AES-256-GCM</span> via Web Crypto API · PBKDF2 key derivation · 100,000 iterations</p>
+        </div>
       </div>
-      <div class="status" id="decStatus"></div>
+
+      <!-- Warning note -->
+      <div style="margin-top: 12px; background: #0A0A0D; border: 1px solid #18181B; border-radius: 10px; padding: 14px 20px; display: flex; align-items: flex-start; gap: 12px;">
+        <svg viewBox="0 0 16 16" fill="none" stroke="#3F3F46" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" width="13" height="13" style="flex-shrink: 0; margin-top: 2px;"><circle cx="8" cy="8" r="6.5"/><path d="M8 7.5v3.5M8 5.5v.5"/></svg>
+        <p style="font-size: 12px; color: #3F3F46; line-height: 1.65;">There is no way to recover your data without the correct passphrase. Keep it safe. If you lose the passphrase, the encrypted text cannot be decrypted.</p>
+      </div>
+
     </div>
-  </div>
+  </main>
 
-  <!-- Info -->
-  <div class="info-card">
-    <div class="info-row"><span class="icon">🛡</span><span><strong>AES-256-GCM</strong> — 改ざん検知付き認証暗号。軍用レベルの強度。</span></div>
-    <div class="info-row"><span class="icon">🔑</span><span><strong>PBKDF2（10万回反復）</strong> — パスワードから鍵を生成。総当たり攻撃を困難に。</span></div>
-    <div class="info-row"><span class="icon">🌐</span><span><strong>ブラウザ内完結</strong> — テキストは外部に送信されません。Web Crypto API を使用。</span></div>
-  </div>
+  <!-- FOOTER -->
+  <footer style="border-top: 1px solid #18181B; padding: 52px 24px 44px;">
+    <div style="max-width: 1100px; margin: 0 auto;">
+      <div class="footer-grid" style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 48px; margin-bottom: 48px;">
+        <div>
+          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 14px;">
+            <div style="width: 30px; height: 30px; background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.2); border-radius: 7px; display: flex; align-items: center; justify-content: center;">
+              <svg viewBox="0 0 16 16" width="12" height="12" fill="#3B82F6"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>
+            </div>
+            <span style="font-size: 14px; font-weight: 600; font-family: 'JetBrains Mono', monospace; letter-spacing: -0.01em;">chunk-jp</span>
+          </div>
+          <p style="font-size: 13px; color: #52525B; max-width: 280px; line-height: 1.7; margin-bottom: 18px;">Privacy-first Mac tools and browser utilities. All local. All free. All open source.</p>
+          <a href="https://github.com/chunk-jp" target="_blank" class="footer-gh" style="display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: #71717A; text-decoration: none; background: #111113; border: 1px solid #27272A; border-radius: 7px; padding: 7px 14px;">
+            <svg viewBox="0 0 16 16" fill="currentColor" width="12" height="12"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+            github.com/chunk-jp
+          </a>
+        </div>
+        <div>
+          <div style="font-size: 11px; font-weight: 600; color: #52525B; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 18px;">Mac Tools</div>
+          <div style="display: flex; flex-direction: column; gap: 11px;">
+            <a href="https://chunk-jp.github.io/attic" class="footer-link" style="font-size: 13px; color: #71717A; text-decoration: none;">Attic</a>
+            <a href="https://chunk-jp.github.io/mirrorhealth" class="footer-link" style="font-size: 13px; color: #71717A; text-decoration: none;">MirrorHealth</a>
+            <a href="https://chunk-jp.github.io/dailypulse" class="footer-link" style="font-size: 13px; color: #71717A; text-decoration: none;">Daily Pulse</a>
+            <a href="https://chunk-jp.github.io/agentwatch" class="footer-link" style="font-size: 13px; color: #71717A; text-decoration: none;">AgentWatch</a>
+          </div>
+        </div>
+        <div>
+          <div style="font-size: 11px; font-weight: 600; color: #52525B; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 18px;">Browser Utilities</div>
+          <div style="display: flex; flex-direction: column; gap: 11px;">
+            <a href="../loan-calculator/" class="footer-link" style="font-size: 13px; color: #71717A; text-decoration: none;">Loan Calculator</a>
+            <a href="../bmi-calculator/" class="footer-link" style="font-size: 13px; color: #71717A; text-decoration: none;">BMI Calculator</a>
+            <a href="../encryption-tool/" style="font-size: 13px; color: #3B82F6; text-decoration: none;">Text Encryption Tool</a>
+            <span style="display: block; height: 4px;"></span>
+            <a href="https://chunk-jp.github.io/privacy" class="footer-link" style="font-size: 13px; color: #71717A; text-decoration: none;">Privacy Policy</a>
+          </div>
+        </div>
+      </div>
+      <div style="border-top: 1px solid #18181B; padding-top: 24px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+        <div style="font-size: 13px; color: #3F3F46;">© 2026 CHUNK-jp · All tools free and open source.</div>
+        <div style="font-size: 12px; color: #27272A; font-family: 'JetBrains Mono', monospace; letter-spacing: 0.02em;">privacy-first · local-first · macOS + web</div>
+      </div>
+    </div>
+  </footer>
 
 </div>
 
 <script>
-  // --- Tab switch ---
-  function switchTab(tab) {
-    const isEnc = tab === 'encrypt';
-    document.getElementById('panelEncrypt').style.display = isEnc ? '' : 'none';
-    document.getElementById('panelDecrypt').style.display = isEnc ? 'none' : '';
-    document.getElementById('tabEncrypt').classList.toggle('active', isEnc);
-    document.getElementById('tabDecrypt').classList.toggle('active', !isEnc);
+  let isEncrypting = true;
+  let passVisible = false;
+
+  function setMode(encrypting) {
+    isEncrypting = encrypting;
+    const btnE = document.getElementById('mode-encrypt');
+    const btnD = document.getElementById('mode-decrypt');
+    btnE.style.background = encrypting ? '#3B82F6' : 'transparent';
+    btnE.style.color = encrypting ? '#fff' : '#71717A';
+    btnD.style.background = encrypting ? 'transparent' : '#3B82F6';
+    btnD.style.color = encrypting ? '#71717A' : '#fff';
+    document.getElementById('input-label').textContent = encrypting ? 'Plaintext' : 'Encrypted text';
+    document.getElementById('output-label').textContent = encrypting ? 'Encrypted text' : 'Decrypted text';
+    document.getElementById('action-label').textContent = encrypting ? 'Encrypt text' : 'Decrypt text';
+    document.getElementById('input-text').placeholder = encrypting ? 'Type or paste your text here…' : 'Paste encrypted text here…';
+    clearOutput();
   }
 
-  // --- Eye toggle ---
-  function toggleEye(inputId, btn) {
-    const el = document.getElementById(inputId);
-    const show = el.type === 'password';
-    el.type = show ? 'text' : 'password';
-    btn.textContent = show ? '🙈' : '👁';
+  function togglePass() {
+    passVisible = !passVisible;
+    const el = document.getElementById('passphrase');
+    el.type = passVisible ? 'text' : 'password';
+    const icon = document.getElementById('eye-icon');
+    icon.innerHTML = passVisible
+      ? `<line x1="1" y1="1" x2="15" y2="15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><ellipse cx="8" cy="8" rx="6" ry="4"/>`
+      : `<ellipse cx="8" cy="8" rx="6" ry="4"/><circle cx="8" cy="8" r="1.5" fill="currentColor" stroke="none"/>`;
   }
 
-  // --- Password strength ---
-  const STRENGTH = [
-    { label: '非常に弱い', colors: ['#ef4444', '#e5e7eb', '#e5e7eb', '#e5e7eb'] },
-    { label: '弱い',       colors: ['#f97316', '#f97316', '#e5e7eb', '#e5e7eb'] },
-    { label: '普通',       colors: ['#eab308', '#eab308', '#eab308', '#e5e7eb'] },
-    { label: '強い',       colors: ['#22c55e', '#22c55e', '#22c55e', '#22c55e'] },
-  ];
-
-  function checkStrength(input, barsId, labelId) {
-    const v = input.value;
-    let score = 0;
-    if (v.length >= 8)  score++;
-    if (v.length >= 12) score++;
-    if (/[A-Z]/.test(v) && /[a-z]/.test(v)) score++;
-    if (/[0-9]/.test(v) && /[^A-Za-z0-9]/.test(v)) score++;
-    score = Math.min(score, 3);
-    const bars = document.getElementById(barsId).children;
-    const s = STRENGTH[v.length === 0 ? 0 : score];
-    Array.from(bars).forEach((b, i) => b.style.background = v.length === 0 ? '#e5e7eb' : s.colors[i]);
-    document.getElementById(labelId).textContent = v.length === 0 ? '強度：-' : '強度：' + s.label;
+  function clearInput() {
+    const el = document.getElementById('input-text');
+    el.value = '';
+    el.focus();
+    clearOutput();
   }
 
-  // --- Copy ---
-  async function copyText(textId, btnId) {
-    const text = document.getElementById(textId).textContent;
-    await navigator.clipboard.writeText(text);
-    const btn = document.getElementById(btnId);
-    btn.textContent = '✅ コピー済み';
-    btn.classList.add('copied');
-    setTimeout(() => { btn.textContent = '📋 コピー'; btn.classList.remove('copied'); }, 2000);
+  function clearOutput() {
+    const out = document.getElementById('output-text');
+    out.value = '';
+    out.style.color = '#71717A';
+    out.style.borderColor = '#18181B';
+    document.getElementById('status-badge').style.display = 'none';
+    document.getElementById('copy-label').textContent = 'Copy';
+    document.getElementById('copy-icon').innerHTML = `<rect x="4" y="4" width="7" height="7" rx="1"/><path d="M1 8V2a1 1 0 011-1h6"/>`;
   }
 
-  // --- Show status ---
-  function showStatus(id, type, msg) {
-    const el = document.getElementById(id);
-    el.className = 'status show ' + type;
-    el.innerHTML = (type === 'success' ? '✅ ' : '❌ ') + msg;
+  async function runCrypto() {
+    const input = document.getElementById('input-text').value.trim();
+    const pass  = document.getElementById('passphrase').value;
+    if (!input) { shake('input-text'); return; }
+    if (!pass)  { shake('passphrase'); return; }
+
+    setLoading(true);
+    try {
+      const result = isEncrypting ? await encrypt(input, pass) : await decrypt(input, pass);
+      showOutput(result, true);
+    } catch (e) {
+      showError(isEncrypting ? 'Encryption failed.' : 'Decryption failed — wrong passphrase or corrupted text.');
+    } finally {
+      setLoading(false);
+    }
   }
-  function clearStatus(id) {
-    document.getElementById(id).className = 'status';
-  }
 
-  // === Crypto helpers (Web Crypto API) ===
-
-  const SALT_LEN = 16, IV_LEN = 12, ITER = 100_000;
-
-  async function deriveKey(password, salt) {
-    const enc = new TextEncoder();
-    const keyMaterial = await crypto.subtle.importKey(
-      'raw', enc.encode(password), 'PBKDF2', false, ['deriveKey']
+  async function deriveKey(passphrase, salt) {
+    const raw = await crypto.subtle.importKey(
+      'raw', new TextEncoder().encode(passphrase),
+      { name: 'PBKDF2' }, false, ['deriveKey']
     );
     return crypto.subtle.deriveKey(
-      { name: 'PBKDF2', salt, iterations: ITER, hash: 'SHA-256' },
-      keyMaterial,
+      { name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' },
+      raw,
       { name: 'AES-GCM', length: 256 },
       false, ['encrypt', 'decrypt']
     );
   }
 
-  function toBase64(buf) {
-    return btoa(String.fromCharCode(...new Uint8Array(buf)));
-  }
-  function fromBase64(str) {
-    return Uint8Array.from(atob(str), c => c.charCodeAt(0));
-  }
-
-  async function encrypt(plaintext, password) {
-    const salt = crypto.getRandomValues(new Uint8Array(SALT_LEN));
-    const iv   = crypto.getRandomValues(new Uint8Array(IV_LEN));
-    const key  = await deriveKey(password, salt);
-    const enc  = new TextEncoder();
-    const cipher = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, enc.encode(plaintext));
-    const combined = new Uint8Array(SALT_LEN + IV_LEN + cipher.byteLength);
+  async function encrypt(text, passphrase) {
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    const iv   = crypto.getRandomValues(new Uint8Array(12));
+    const key  = await deriveKey(passphrase, salt);
+    const enc  = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, new TextEncoder().encode(text));
+    const combined = new Uint8Array(16 + 12 + enc.byteLength);
     combined.set(salt, 0);
-    combined.set(iv,   SALT_LEN);
-    combined.set(new Uint8Array(cipher), SALT_LEN + IV_LEN);
-    return toBase64(combined.buffer);
+    combined.set(iv, 16);
+    combined.set(new Uint8Array(enc), 28);
+    return btoa(String.fromCharCode(...combined));
   }
 
-  async function decrypt(encoded, password) {
-    const combined = fromBase64(encoded);
-    const salt   = combined.slice(0, SALT_LEN);
-    const iv     = combined.slice(SALT_LEN, SALT_LEN + IV_LEN);
-    const cipher = combined.slice(SALT_LEN + IV_LEN);
-    const key    = await deriveKey(password, salt);
-    const plain  = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, cipher);
-    return new TextDecoder().decode(plain);
+  async function decrypt(b64, passphrase) {
+    let bytes;
+    try { bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0)); }
+    catch (_) { throw new Error('invalid base64'); }
+    if (bytes.length < 29) throw new Error('too short');
+    const salt = bytes.slice(0, 16);
+    const iv   = bytes.slice(16, 28);
+    const data = bytes.slice(28);
+    const key  = await deriveKey(passphrase, salt);
+    const dec  = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, data);
+    return new TextDecoder().decode(dec);
   }
 
-  // === UI handlers ===
+  function setLoading(on) {
+    const overlay = document.getElementById('loading-overlay');
+    const btn = document.getElementById('action-btn');
+    overlay.style.display = on ? 'flex' : 'none';
+    btn.disabled = on;
+    btn.style.opacity = on ? '0.6' : '1';
+    btn.style.cursor = on ? 'not-allowed' : 'pointer';
+  }
 
-  async function doEncrypt() {
-    clearStatus('encStatus');
-    const text = document.getElementById('encInput').value.trim();
-    const pass = document.getElementById('encPass').value;
-    if (!text) { showStatus('encStatus', 'error', 'テキストを入力してください'); return; }
-    if (!pass)  { showStatus('encStatus', 'error', 'パスワードを入力してください'); return; }
+  function showOutput(text, success) {
+    const out   = document.getElementById('output-text');
+    const badge = document.getElementById('status-badge');
+    out.value = text;
+    out.style.color = '#FAFAFA';
+    out.style.borderColor = 'rgba(34,197,94,0.25)';
+    out.classList.remove('fade-in');
+    void out.offsetWidth;
+    out.classList.add('fade-in');
+    badge.style.display = 'flex';
+    badge.style.background = 'rgba(34,197,94,0.1)';
+    badge.style.border = '1px solid rgba(34,197,94,0.2)';
+    badge.style.color = '#22C55E';
+    badge.innerHTML = `<svg viewBox="0 0 10 10" fill="none" stroke="#22C55E" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="8" height="8"><path d="M2 5l2 2 4-4"/></svg>&nbsp;${isEncrypting ? 'Encrypted' : 'Decrypted'}`;
+  }
+
+  function showError(msg) {
+    const out   = document.getElementById('output-text');
+    const badge = document.getElementById('status-badge');
+    out.value = msg;
+    out.style.color = '#EF4444';
+    out.style.borderColor = 'rgba(239,68,68,0.3)';
+    badge.style.display = 'flex';
+    badge.style.background = 'rgba(239,68,68,0.08)';
+    badge.style.border = '1px solid rgba(239,68,68,0.2)';
+    badge.style.color = '#EF4444';
+    badge.innerHTML = `<svg viewBox="0 0 10 10" fill="none" stroke="#EF4444" stroke-width="1.8" stroke-linecap="round" width="8" height="8"><path d="M2 2l6 6M8 2l-6 6"/></svg>&nbsp;Error`;
+    shake('output-text');
+  }
+
+  async function copyOutput() {
+    const val = document.getElementById('output-text').value;
+    if (!val) return;
     try {
-      const result = await encrypt(text, pass);
-      document.getElementById('encResultText').textContent = result;
-      document.getElementById('encResult').classList.add('show');
-      showStatus('encStatus', 'success', '暗号化が完了しました');
-    } catch (e) {
-      showStatus('encStatus', 'error', '暗号化に失敗しました：' + e.message);
-    }
+      await navigator.clipboard.writeText(val);
+      const lbl = document.getElementById('copy-label');
+      const ico = document.getElementById('copy-icon');
+      lbl.textContent = 'Copied!';
+      ico.innerHTML = `<path d="M2 5l2 2 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>`;
+      setTimeout(() => {
+        lbl.textContent = 'Copy';
+        ico.innerHTML = `<rect x="4" y="4" width="7" height="7" rx="1"/><path d="M1 8V2a1 1 0 011-1h6"/>`;
+      }, 2000);
+    } catch (_) {}
   }
 
-  async function doDecrypt() {
-    clearStatus('decStatus');
-    const text = document.getElementById('decInput').value.trim();
-    const pass = document.getElementById('decPass').value;
-    if (!text) { showStatus('decStatus', 'error', '暗号化テキストを入力してください'); return; }
-    if (!pass)  { showStatus('decStatus', 'error', 'パスワードを入力してください'); return; }
-    try {
-      const result = await decrypt(text, pass);
-      document.getElementById('decResultText').textContent = result;
-      document.getElementById('decResult').classList.add('show');
-      showStatus('decStatus', 'success', '復号が完了しました');
-    } catch {
-      showStatus('decStatus', 'error', 'パスワードが違うか、テキストが破損しています');
-    }
+  function shake(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.remove('shake');
+    void el.offsetWidth;
+    el.classList.add('shake');
+    el.focus();
   }
+
+  document.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') runCrypto();
+  });
 </script>
 </body>
 </html>
